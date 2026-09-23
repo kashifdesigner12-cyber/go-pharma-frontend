@@ -17,7 +17,6 @@ import {
   UserRound,
   CreditCard,
   Banknote,
-  Sparkles,
 } from "lucide-react";
 import { apiRequest, API_URL } from "@/lib/api";
 
@@ -487,11 +486,12 @@ export default function POSPage() {
         paymentMethod: backendPaymentMethod,
       };
 
+      // FIXED: apiRequest handles JSON.stringify internally
       const response = await apiRequest(
         "/sales",
         {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: payload,
         }
       );
 
@@ -613,18 +613,6 @@ export default function POSPage() {
           <div className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between animate-in fade-in slide-in-from-top-2 duration-500">
 
             <div>
-              <div className="mb-2 flex items-center gap-2">
-
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-purple-600 transition-transform duration-300 hover:scale-110 hover:rotate-3">
-                  <Sparkles size={14} />
-                </span>
-
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-purple-600">
-                  GO-Pharma
-                </p>
-
-              </div>
-
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 transition-colors duration-300 sm:text-4xl">
                 Point of Sale
               </h1>
@@ -1253,8 +1241,7 @@ export default function POSPage() {
         </div>
 
       </div>
-
-      {/* =========================
+            {/* =========================
           PROFESSIONAL RECEIPT
       ========================= */}
       {receipt && (

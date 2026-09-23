@@ -9,6 +9,9 @@ const API_URL = CLEAN_API_URL.endsWith("/api")
   ? CLEAN_API_URL
   : `${CLEAN_API_URL}/api`;
 
+/**
+ * Parse API response
+ */
 async function parseResponse(response) {
   let data = null;
   let rawText = "";
@@ -31,12 +34,42 @@ async function parseResponse(response) {
     let message = `Request failed with status ${response.status}`;
 
     if (data && typeof data === "object") {
-      if (typeof data.message === "string" && data.message.trim()) {
+      if (
+        typeof data.message === "string" &&
+        data.message.trim()
+      ) {
         message = data.message;
-      } else if (typeof data.error === "string" && data.error.trim()) {
+      } else if (
+        typeof data.error === "string" &&
+        data.error.trim()
+      ) {
         message = data.error;
+      } else if (
+        Array.isArray(data.errors) &&
+        data.errors.length > 0
+      ) {
+        message = data.errors
+          .map((item) => {
+            if (typeof item === "string") {
+              return item;
+            }
+
+            if (item?.message) {
+              return item.message;
+            }
+
+            if (item?.msg) {
+              return item.msg;
+            }
+
+            return JSON.stringify(item);
+          })
+          .join(", ");
       }
-    } else if (typeof data === "string" && data.trim()) {
+    } else if (
+      typeof data === "string" &&
+      data.trim()
+    ) {
       message = data.trim();
     }
 
@@ -54,6 +87,9 @@ async function parseResponse(response) {
   return data;
 }
 
+/**
+ * Login
+ */
 export async function loginUser(email, password) {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
@@ -70,6 +106,9 @@ export async function loginUser(email, password) {
   return parseResponse(response);
 }
 
+/**
+ * Generic API request
+ */
 export async function apiRequest(endpoint, options = {}) {
   const token =
     typeof window !== "undefined"
@@ -82,6 +121,7 @@ export async function apiRequest(endpoint, options = {}) {
     throw new Error("API endpoint is required.");
   }
 
+  // Make sure endpoint starts with /
   if (!cleanEndpoint.startsWith("/")) {
     cleanEndpoint = `/${cleanEndpoint}`;
   }
@@ -102,33 +142,58 @@ export async function apiRequest(endpoint, options = {}) {
 
   const headers = {
     Accept: "application/json",
-
     ...(token
       ? {
           Authorization: `Bearer ${token}`,
         }
       : {}),
-
     ...(options.headers || {}),
   };
 
-  if (
-    options.body !== undefined &&
-    options.body !== null &&
-    !(options.body instanceof FormData)
-  ) {
-    if (!headers["Content-Type"]) {
-      headers["Content-Type"] = "application/json";
-    }
-  }
+  const isFormData =
+    typeof FormData !== "undefined" &&
+    options.body instanceof FormData;
 
   const requestOptions = {
     ...options,
     headers,
   };
 
+  /**
+   * Convert normal JavaScript objects to JSON.
+   *
+   * Example:
+   * body: {
+   *   quantity: 10
+   * }
+   *
+   * becomes:
+   * {"quantity":10}
+   */
+  if (
+    options.body !== undefined &&
+    options.body !== null &&
+    !isFormData
+  ) {
+    const isPlainObject =
+      typeof options.body === "object" &&
+      !(options.body instanceof Blob) &&
+      !(options.body instanceof ArrayBuffer);
+
+    if (isPlainObject) {
+      if (!headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+
+      requestOptions.body = JSON.stringify(options.body);
+    }
+  }
+
   console.log("========== API REQUEST ==========");
-  console.log("METHOD:", requestOptions.method || "GET");
+  console.log(
+    "METHOD:",
+    requestOptions.method || "GET"
+  );
   console.log("URL:", url);
   console.log("HAS TOKEN:", Boolean(token));
 
